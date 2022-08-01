@@ -3,7 +3,7 @@
 int
 main (int argc, char *argv[])
 {
-  GstElement *pipeline, *source, *sink;
+  GstElement *pipeline, *source, *sink, *filter, *convert;
   GstBus *bus;
   GstMessage *msg;
   GstStateChangeReturn ret;
@@ -14,6 +14,8 @@ main (int argc, char *argv[])
   /* Create the elements */
   source = gst_element_factory_make ("videotestsrc", "source");
   sink = gst_element_factory_make ("autovideosink", "sink");
+  filter = gst_element_factory_make ("vertigotv", "filter");
+  convert = gst_element_factory_make ("videoconvert", "convert");
 
   /* Create the empty pipeline */
   pipeline = gst_pipeline_new ("test-pipeline");
@@ -24,12 +26,36 @@ main (int argc, char *argv[])
   }
 
   /* Build the pipeline */
-  gst_bin_add_many (GST_BIN (pipeline), source, sink, NULL);
-  if (gst_element_link (source, sink) != TRUE) {
+  gst_bin_add_many (GST_BIN (pipeline), source, filter, convert, sink, NULL);
+  if (gst_element_link (source, filter) != TRUE) {
+    g_printerr ("Elements could not be linked. A\n");
+    gst_object_unref (pipeline);
+    return -1;
+  }
+#if 1
+//  if (gst_element_link (filter, convert) != TRUE) {
+//    g_printerr ("Elements could not be linked.B\n");
+//    gst_object_unref (pipeline);
+//    return -1;
+//  }
+//  if (gst_element_link (convert, sink) != TRUE) {
+//    g_printerr ("Elements could not be linked. C\n");
+//    gst_object_unref (pipeline);
+//    return -1;
+//  }
+
+  if (!gst_element_link_many (filter, convert, sink, NULL)) {
     g_printerr ("Elements could not be linked.\n");
     gst_object_unref (pipeline);
     return -1;
   }
+#else
+  if (gst_element_link (filter, sink) != TRUE) {
+    g_printerr ("Elements could not be linked.B\n");
+    gst_object_unref (pipeline);
+    return -1;
+  }
+#endif
 
   /* Modify the source's properties */
   g_object_set (source, "pattern", 0, NULL);
